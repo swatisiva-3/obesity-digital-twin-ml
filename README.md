@@ -1,2 +1,2 @@
 # obesity-digital-twin-ml
-Josh's model code + on-going improvements 
+UTK Obesity Digital Twin Project – MBSAQIP data processing, phenotype scoring, and postoperative outcome prediction ( Josh's model + improvements) 
