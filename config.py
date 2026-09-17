@@ -40,10 +40,10 @@ MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 # used by name throughout the code -- don't rename the keys, only the paths.
 # >>> WHEN YOU SWITCH DATASETS: change these paths (and see NHANES note below) <<<
 FILE_PATHS = {
-    "main": os.path.join(DATA_DIR, "PUF_MAINFINAL_2023.txt"),
-    "intv": os.path.join(DATA_DIR, "PUF_INTVFINAL_2023.txt"),
-    "reop": os.path.join(DATA_DIR, "PUF_REOPFINAL_2023.txt"),
-    "read": os.path.join(DATA_DIR, "PUF_READFINAL_2023.txt"),
+    "main": os.path.join(DATA_DIR, "PUF_MAIN_2023.tsv"),
+    "intv": os.path.join(DATA_DIR, "PUF_INTV_2023.tsv"),
+    "reop": os.path.join(DATA_DIR, "PUF_REOP_2023.tsv"),
+    "read": os.path.join(DATA_DIR, "PUF_READ_2023.tsv"),
 }
 
 # Delimiter used in the raw files. MBSAQIP PUF text exports are tab-separated.
