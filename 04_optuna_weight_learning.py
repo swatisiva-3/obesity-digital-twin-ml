@@ -40,7 +40,6 @@ import pandas as pd
 import optuna
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import train_test_split
 
 import config
 import utils
@@ -110,13 +109,32 @@ def build_objective(df, variable_structure, train_idx, val_idx):
         variable_weights, domain_weights = unflatten_weights(flat, variable_structure)
         domain_scores_df, total_score = scoring_engine.full_scoring_pipeline(df, variable_weights, domain_weights)
 
-        features = pd.concat([domain_scores_df, total_score.rename("TOTAL")], axis=1).fillna(0.0)
+        #features = pd.concat([domain_scores_df, total_score.rename("TOTAL")], axis=1).fillna(0.0)
+        features = domain_scores_df.fillna(0.0)
         X_train, X_val = features.loc[train_idx], features.loc[val_idx]
 
         model = Ridge(alpha=1.0, random_state=config.RANDOM_SEED)
+        #model.fit(X_train, y_train)
+        #preds = model.predict(X_val)
+        #rmse = float(np.sqrt(mean_squared_error(y_val, preds)))
+
         model.fit(X_train, y_train)
-        preds = model.predict(X_val)
+
+        # Avoid NumPy/Apple Accelerate large-matrix-multiplication warnings.
+        # This is mathematically equivalent to X_val @ model.coef_.
+        X_val_np = X_val.to_numpy(dtype=np.float64)
+        coef = np.asarray(model.coef_, dtype=np.float64)
+
+        preds = (
+            X_val_np[:, 0] * coef[0]
+            + X_val_np[:, 1] * coef[1]
+            + X_val_np[:, 2] * coef[2]
+            + X_val_np[:, 3] * coef[3]
+            + model.intercept_
+        )
+
         rmse = float(np.sqrt(mean_squared_error(y_val, preds)))
+
         return rmse
 
     return objective
@@ -134,8 +152,88 @@ def main():
     seed_variable_weights, seed_domain_weights = load_seed_weights(df)
     seed_flat = flatten_weights(seed_variable_weights, seed_domain_weights)
 
-    train_idx, val_idx = train_test_split(
-        df.index, test_size=config.TEST_SIZE, random_state=config.RANDOM_SEED
+    # --------------------------------------------------------------
+    # Use the permanent 70/15/15 split shared by the entire pipeline.
+    #
+    # IMPORTANT:
+    #   TRAIN      -> used to fit the Ridge model
+    #   VALIDATION -> used by Optuna to select phenotype weights
+    #   TEST       -> completely untouched during Step 4
+    # --------------------------------------------------------------
+
+    split_path = os.path.join(
+        config.MODEL_DIR,
+        "train_val_test_indices.json"
+    )
+
+    if not os.path.exists(split_path):
+        raise FileNotFoundError(
+            f"Permanent train/validation/test split not found: {split_path}"
+        )
+
+    with open(split_path, "r") as f:
+        split_data = json.load(f)
+
+    train_idx = np.array(
+        split_data["train_indices"],
+        dtype=int
+    )
+
+    val_idx = np.array(
+        split_data["validation_indices"],
+        dtype=int
+    )
+
+    test_idx = np.array(
+        split_data["test_indices"],
+        dtype=int
+    )
+
+    # --------------------------------------------------------------
+    # Safety checks: make sure the split matches this exact dataset.
+    # --------------------------------------------------------------
+
+    if (
+        len(train_idx)
+        + len(val_idx)
+        + len(test_idx)
+        != len(df)
+    ):
+        raise ValueError(
+            "Saved train/validation/test split does not cover "
+            "the current Step 3 dataset exactly."
+        )
+
+    if (
+        len(set(train_idx) & set(val_idx)) > 0
+        or len(set(train_idx) & set(test_idx)) > 0
+        or len(set(val_idx) & set(test_idx)) > 0
+    ):
+        raise ValueError(
+            "Saved train/validation/test split contains overlapping patients."
+        )
+
+    if (
+        set(train_idx)
+        | set(val_idx)
+        | set(test_idx)
+    ) != set(df.index):
+        raise ValueError(
+            "Saved train/validation/test split does not match "
+            "the current dataframe indices."
+        )
+
+    utils.log(
+        "04_optuna",
+        f"Using permanent split: "
+        f"{len(train_idx):,} train / "
+        f"{len(val_idx):,} validation / "
+        f"{len(test_idx):,} test."
+    )
+
+    utils.log(
+        "04_optuna",
+        "TEST SET IS LOCKED AND WILL NOT BE USED BY OPTUNA."
     )
 
     sampler = optuna.samplers.TPESampler(seed=config.RANDOM_SEED)  # TPE = Tree-structured Parzen Estimator

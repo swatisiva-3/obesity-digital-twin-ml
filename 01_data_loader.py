@@ -57,13 +57,6 @@ def collect_columns_by_file():
         if spec.get("unit_column"):
             columns_by_file["main"].add(spec["unit_column"])
 
-    # A few extra main-file columns that are useful context even though they
-    # aren't in the rationale: REOP30/READ30/INTV30 tell you (per-patient,
-    # without needing to join the 3 detail files) whether that patient had
-    # a reoperation/readmission/intervention within 30 days.
-    for extra in ("REOP30", "READ30", "INTV30"):
-        columns_by_file["main"].add(extra)
-
     return {k: sorted(v) for k, v in columns_by_file.items()}
 
 
