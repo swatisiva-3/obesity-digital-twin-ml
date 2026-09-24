@@ -30,25 +30,20 @@ import os
 DATASET_LABEL = "MBSAQIP_2023_PUF"
 
 # Folder that holds your raw input files. Change this if you move the data.
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+DATA_DIR = "/Users/sanjeevsanthosh/Desktop/Internships/Tan Robotics/data_prep/output/MBSAQIP_PUF_2023"
+
+FILE_PATHS = {
+    "main": os.path.join(DATA_DIR, "MBSAQIP_PUF_2023_MAIN.csv"),
+    "intv": os.path.join(DATA_DIR, "MBSAQIP_PUF_2023_INTV.csv"),
+    "reop": os.path.join(DATA_DIR, "MBSAQIP_PUF_2023_REOP.csv"),
+    "read": os.path.join(DATA_DIR, "MBSAQIP_PUF_2023_READ.csv"),
+}
+
+FILE_DELIMITER = ","
 
 # Folder everything gets written to (Excel files, plots, model files).
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs")
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
-
-# The 4 source files for this run. KEYS ("main", "intv", "reop", "read") are
-# used by name throughout the code -- don't rename the keys, only the paths.
-# >>> WHEN YOU SWITCH DATASETS: change these paths (and see NHANES note below) <<<
-FILE_PATHS = {
-    "main": os.path.join(DATA_DIR, "PUF_MAINFINAL_2023.txt"),
-    "intv": os.path.join(DATA_DIR, "PUF_INTVFINAL_2023.txt"),
-    "reop": os.path.join(DATA_DIR, "PUF_REOPFINAL_2023.txt"),
-    "read": os.path.join(DATA_DIR, "PUF_READFINAL_2023.txt"),
-}
-
-# Delimiter used in the raw files. MBSAQIP PUF text exports are tab-separated.
-# >>> If your new file is comma-separated, change this to "," <<<
-FILE_DELIMITER = "\t"
 
 # The patient identifier column name, as it appears in the raw files.
 # It must be spelled identically in main/intv/reop/read for the join to work.
@@ -192,14 +187,14 @@ VARIABLE_RATIONALE = {
         "variables": {
             "BMI_HIGH_BAR": {
                 "rank": 1, "weight": 30, "column": "BMI_HIGH_BAR", "unit_column": None,
-                "source_file": "main", "var_type": "numeric", "direction": "high_is_bad",
-                "ideal": 21.7, "tolerance": 5, "severity_span": 25,
+                "source_file": "main", "var_type": "numeric", "direction": "high_is_bad", 
+                "ideal": 21.7, "tolerance": 3.2, "severity_span": 18.3,
                 "contributes_to_severity_score": True, "flag_direction_logic": "increase",
             },
             "BMI": {
                 "rank": 2, "weight": 25, "column": "BMI", "unit_column": None,
-                "source_file": "main", "var_type": "numeric", "direction": "two_sided",
-                "ideal": 21.7, "tolerance": 5, "severity_span": 25,
+                "source_file": "main", "var_type": "numeric", "direction": "high_is_bad",
+                "ideal": 21.7, "tolerance": 3.2, "severity_span": 18.3,
                 "contributes_to_severity_score": True, "flag_direction_logic": "increase",
             },
             "WGT_HIGH_BAR": {
@@ -298,13 +293,13 @@ VARIABLE_RATIONALE = {
             "ALBUMIN": {
                 "rank": 7, "weight": 6, "column": "ALBUMIN", "unit_column": None,
                 "source_file": "main", "var_type": "numeric", "direction": "low_is_bad",
-                "ideal": 4.25, "tolerance": 0.5, "severity_span": 2.0,  # g/dL scale, NOT +/-5
+                "ideal": 4.25, "tolerance": 0.75, "severity_span": 1.75,
                 "contributes_to_severity_score": True, "flag_direction_logic": "increase",
             },
             "CREATININE": {
                 "rank": 8, "weight": 4, "column": "CREATININE", "unit_column": None,
                 "source_file": "main", "var_type": "numeric", "direction": "high_is_bad",
-                "ideal": 0.85, "tolerance": 0.2, "severity_span": 2.0,  # mg/dL scale, NOT +/-5
+                "ideal": 0.85, "tolerance": 0.45, "severity_span": 2.15,
                 "contributes_to_severity_score": True, "flag_direction_logic": "increase",
             },
             "DIALYSIS": {
