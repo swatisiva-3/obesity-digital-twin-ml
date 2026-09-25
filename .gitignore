@@ -28,3 +28,4 @@ combine_mbsaqip
 .DS_Store
 outputs/
 models/
+__pycache__/
