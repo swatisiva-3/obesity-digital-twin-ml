@@ -37,6 +37,10 @@ file you can open directly -- see config.EXCEL_PREVIEW_ROWS. The full
 dataset is ~215k rows x ~90 columns, which Excel can technically open but
 is slow to work with interactively; the CSV/parquet are the full data).
 """
+import warnings
+from pandas.errors import PerformanceWarning
+
+warnings.filterwarnings("ignore", category=PerformanceWarning)
 
 import os
 import numpy as np

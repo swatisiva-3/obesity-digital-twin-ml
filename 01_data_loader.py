@@ -57,42 +57,59 @@ def collect_columns_by_file():
         if spec.get("unit_column"):
             columns_by_file["main"].add(spec["unit_column"])
 
-    # A few extra main-file columns that are useful context even though they
-    # aren't in the rationale: REOP30/READ30/INTV30 tell you (per-patient,
-    # without needing to join the 3 detail files) whether that patient had
-    # a reoperation/readmission/intervention within 30 days.
-    for extra in ("REOP30", "READ30", "INTV30"):
-        columns_by_file["main"].add(extra)
-
     return {k: sorted(v) for k, v in columns_by_file.items()}
 
 
 def read_one_file(file_key):
-    """Read a single raw PUF file, restricted to the columns it needs to supply."""
     path = config.FILE_PATHS[file_key]
+
     if not os.path.exists(path):
-        raise FileNotFoundError(
-            f"Expected input file for '{file_key}' at {path} but it doesn't exist. "
-            f"Update config.FILE_PATHS['{file_key}'] to point at your file."
-        )
+        raise FileNotFoundError(f"Missing source file: {path}")
+
     wanted_columns = collect_columns_by_file()[file_key]
 
-    # Peek at the real header first, because usecols will silently drop a
-    # column that's requested but not present -- we want a loud warning
-    # instead, since a missing column usually means a rationale mapping is
-    # stale for this dataset (exactly what happened with MOBILITY_DEVICE).
-    header = pd.read_csv(path, sep=config.FILE_DELIMITER, nrows=0).columns.tolist()
-    missing = [c for c in wanted_columns if c not in header]
-    if missing:
-        utils.log("01_data_loader", f"WARNING: columns requested from '{file_key}' but not found "
-                                     f"in {os.path.basename(path)}: {missing}. Check config.py column names.")
-    usable_columns = [c for c in wanted_columns if c in header]
+    # MBSAQIP files may be supplied as either the original tab-separated
+    # text exports or as Excel workbooks.
+    if path.lower().endswith((".xlsx", ".xls")):
+        header_df = pd.read_excel(path, sheet_name=0, nrows=0)
+        header = header_df.columns.tolist()
 
-    df = pd.read_csv(path, sep=config.FILE_DELIMITER, usecols=usable_columns, dtype=str, low_memory=False)
-    utils.log("01_data_loader", f"Loaded '{file_key}': {len(df):,} rows x {len(usable_columns)} columns "
-                                 f"from {os.path.basename(path)}")
+        missing = [c for c in wanted_columns if c not in header]
+        if missing:
+            utils.log("01_data_loader", f"[{file_key}] Missing requested columns ({len(missing)}): " + ", ".join(missing))
+
+        usable_columns = [c for c in wanted_columns if c in header]
+
+        df = pd.read_excel(
+            path,
+            sheet_name=0,
+            usecols=usable_columns,
+            dtype=str,
+        )
+    else:
+        header = pd.read_csv(
+            path,
+            sep=config.FILE_DELIMITER,
+            nrows=0,
+        ).columns.tolist()
+
+        missing = [c for c in wanted_columns if c not in header]
+        if missing:
+            utils.log("01_data_loader", f"[{file_key}] Missing requested columns ({len(missing)}): " + ", ".join(missing))
+
+        usable_columns = [c for c in wanted_columns if c in header]
+
+        df = pd.read_csv(
+            path,
+            sep=config.FILE_DELIMITER,
+            usecols=usable_columns,
+            dtype=str,
+            low_memory=False,
+        )
+
+    utils.log("01_data_loader", f"[{file_key}] Loaded {len(df):,} rows x {len(df.columns):,} columns from {os.path.basename(path)}")
+
     return df
-
 
 def build_all_4_files_linkage_sheet(main_df, intv_ids, reop_ids, read_ids):
     """
